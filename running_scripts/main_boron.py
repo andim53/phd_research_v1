@@ -70,6 +70,13 @@ removed_num = 0
 num_candidates={0:[20,0], 10:[10,10], 25:[0,20]}
 sample_size = 20
 
+"""
+Atom adition
+"""
+symbol_add = 'B'
+z_height_add = 0 # A
+num_atoms_add = 2
+
 for seed in range(103):
 	print(F"Start seed: {seed}")
 	
@@ -115,7 +122,7 @@ for seed in range(103):
 	bottom_height = np.min(z_coordinates)
 
 	# Boron controls
-	slab_deposition = add_adsorbate_to_hollows(slab_deposition, symbol='B',height=0, num_atoms=5,seed=42)
+	slab_deposition = add_adsorbate_to_hollows(slab_deposition, symbol=symbol_add,height=z_height_add, num_atoms=num_atoms_add,seed=seed)
 
 	# Build test
 	test_heteroStruct, test_substrate, test_deposition, substrate_layer_heights, deposition_layer_heights = build_heteroStruct(slab_substrate, slab_deposition, output_path=f'{path_xsf}/heteroStruct.xsf')
