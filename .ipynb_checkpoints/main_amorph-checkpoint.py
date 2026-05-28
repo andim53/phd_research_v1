@@ -30,16 +30,25 @@ Cell volume controls
 
 Helps for permutation and random movement.
 """
-scale_cell = 1.01 # 1.05->+5%
+scale_cell = 1.26 # # 1.05 # 1.05->+5%
 
 a_ta = 3.30
 supercell = (3, 3, 3)
 kpts = (1, 1, 1) 
 ncores = 24 # 16 genkai
-cB = 0.01 # B concentrations (%)
+cB = 0.05 # 0.01 # B concentrations (%)
 N_iterations = 100 # AGOX iterations
 num_candidates = {0: [10, 0, 0], 10: [5, 5, 0], 25: [2, 3, 5]}
 sample_size = 10
+
+# permut
+max_number_of_swaps = 10
+permut_attempts = 10
+check_overlap = True 
+
+# rand
+rand_attempts = 500
+check_covalent = False 
 
 for seed in range(100):
     print(f"Start seed: {seed}")   
@@ -77,32 +86,45 @@ for seed in range(100):
         AmorphStructRandomize(
             **environment.get_confinement(),
             amorph=tab_bulk,
+            
             write_struct=True,
+            write_temp_struct = False,
+            
             rattle_amplitude=1.5,
+            attempts = rand_attempts, # each atom perform more random, compound random
             n_rattle=n_rattle,
             generate_pristine=False,
+            
+            print_result=False,
+            check_covalent = check_covalent,
         ),
         RattleGenerator(
             **environment.get_confinement(),
             n_rattle=int(n_rattle), # 0.7 * n_rattle
-            rattle_amplitude=2.3,
+            rattle_amplitude=1.5 #2.3,
         ),
         AmorphPermutationGenerator(
-            **environment.get_confinement(),
-            max_number_of_swaps=5,
-            rattle_strength=0.0,
-            # attempts=1,
-            # confinement_check = True,
-            # check_overlap=True,		
+            **environment.get_confinement(),            
+            max_number_of_swaps=max_number_of_swaps, # 1
+            rattle_strength= 1.5, # 0.0,
+            use_xy_only=False,
+            ignore_species=None,
+            write_candidates_to_disk=False,
+            replace=True,
+            attempts=permut_attempts, # 100,
+            check_overlap=check_overlap,
+            
+            print_result=False,
+            write_struct=False,
         ),
     ]
 
-    amorph_candidate = generators[0](sampler=None, environment=environment)[0]
-    write(f"{path_xsf}/amorph_candidate.xsf", amorph_candidate)
+    # amorph_candidate = generators[0](sampler=None, environment=environment)[0]
+    # write(f"{path_xsf}/amorph_candidate.xsf", amorph_candidate)
 
-    sampler = FixedSampler(amorph_candidate)
-    write(f"{path_xsf}/rattle_candidate.xsf", generators[1](sampler, environment)[0])
-    write(f"{path_xsf}/permut_candidate.xsf", generators[2](sampler, environment)[0])
+    # sampler = FixedSampler(amorph_candidate)
+    # write(f"{path_xsf}/rattle_candidate.xsf", generators[1](sampler, environment)[0])
+    # write(f"{path_xsf}/permut_candidate.xsf", generators[2](sampler, environment)[0])
 
     """
     for i in range(100):
