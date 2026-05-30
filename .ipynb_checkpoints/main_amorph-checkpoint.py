@@ -30,25 +30,28 @@ Cell volume controls
 
 Helps for permutation and random movement.
 """
-scale_cell = 1.26 # # 1.05 # 1.05->+5%
+scale_cell = 1.00 # 1.26 # # 1.05 # 1.05->+5%
 
-a_ta = 3.30
+a_ta = 3.331167 # optim # 3.30
 supercell = (3, 3, 3)
 kpts = (1, 1, 1) 
 ncores = 24 # 16 genkai
 cB = 0.05 # 0.01 # B concentrations (%)
 N_iterations = 100 # AGOX iterations
-num_candidates = {0: [10, 0, 0], 10: [5, 5, 0], 25: [2, 3, 5]}
+num_candidates = {0: [10, 0, 0], 10: [5, 5, 0], 25: [0, 5, 5]}
 sample_size = 10
 
 # permut
-max_number_of_swaps = 10
-permut_attempts = 10
-check_overlap = True 
+max_number_of_swaps = 20
+permut_attempts = 20
+check_overlap = False 
 
 # rand
 rand_attempts = 500
 check_covalent = False 
+
+success_count = 0
+fail_count = 0
 
 for seed in range(100):
     print(f"Start seed: {seed}")   
@@ -69,10 +72,15 @@ for seed in range(100):
         ta_bulk, cB=cB, make_structure=True
     )
 
+    print(f"{n_b=}")
+    
+    write("tab_bulk.xsf",tab_bulk)
+    write("ta_bulk.xsf", ta_bulk)
+
     """
     Environment is an empty cells, size of ta_bulk. 
     """
-    template = Atoms("", cell=ta_bulk.cell.copy(), pbc=True)
+    template = Atoms("", cell=tab_bulk.cell.copy(), pbc=True)
     environment = Environment(
         template=template,
         symbols=tab_bulk.get_chemical_formula(),
@@ -81,7 +89,7 @@ for seed in range(100):
         box_constraint_pbc=[True, True, True],
     )
 
-    n_rattle = len(ta_bulk)
+    n_rattle = len(tab_bulk)
     generators = [
         AmorphStructRandomize(
             **environment.get_confinement(),
@@ -95,7 +103,7 @@ for seed in range(100):
             n_rattle=n_rattle,
             generate_pristine=False,
             
-            print_result=False,
+            print_result=True,
             check_covalent = check_covalent,
         ),
         RattleGenerator(
@@ -104,7 +112,8 @@ for seed in range(100):
             rattle_amplitude=1.5 #2.3,
         ),
         AmorphPermutationGenerator(
-            **environment.get_confinement(),            
+            **environment.get_confinement(),	
+            
             max_number_of_swaps=max_number_of_swaps, # 1
             rattle_strength= 1.5, # 0.0,
             use_xy_only=False,
@@ -114,11 +123,43 @@ for seed in range(100):
             attempts=permut_attempts, # 100,
             check_overlap=check_overlap,
             
+            # Distance scale parameters used for overlap validations
+            min_distance_scale=0.85,
+            max_distance_scale=1.15,
             print_result=False,
-            write_struct=False,
+            
+            write_struct=True,
         ),
     ]
 
+    try:
+            amorph_candidate = generators[0](
+                sampler=None,
+                environment=environment
+            )[0]
+            write(f"{path_xsf}/amorph_candidate_{seed}.xsf", amorph_candidate)
+            print(f"amorph {seed}")
+        
+            sampler_test = FixedSampler(amorph_candidate)
+        
+            rattle_candidate = generators[1](
+                sampler_test,
+                environment
+            )[0]
+            write(f"{path_xsf}/rattle_candidate_{seed}.xsf", rattle_candidate)
+            print(f"rattle {seed}")
+        
+            permut_candidate = generators[2](
+                sampler_test,
+                environment
+            )[0]
+            write(f"{path_xsf}/permut_candidate_{seed}.xsf", permut_candidate)
+            print(f"permut {seed}")
+            success_count += 1
+    except Exception:
+            fail_count += 1
+
+    print(f"Current: {success_count=}, {fail_count=}")
     # amorph_candidate = generators[0](sampler=None, environment=environment)[0]
     # write(f"{path_xsf}/amorph_candidate.xsf", amorph_candidate)
 
