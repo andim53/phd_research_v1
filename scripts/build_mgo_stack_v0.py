@@ -3,7 +3,7 @@ import numpy as np
 from ase import Atoms
 
 
-def build_mgo_stack(slab_fe, num_layers, dist_fe2o=2.3, dist_mgo=2.106, output_path=None, vacuum=10, rotate_system=False):
+def build_mgo_stack(slab_fe, num_layers, dist_fe2o=2.3, dist_mgo=2.106, output_path=None, vacuum = 10):
     """
     Build Fe/MgO layered structure with alternating O and Mg atoms on top of an Fe slab.
 
@@ -13,15 +13,12 @@ def build_mgo_stack(slab_fe, num_layers, dist_fe2o=2.3, dist_mgo=2.106, output_p
         dist_fe2o (float): Distance from Fe top surface to first O layer (in Å).
         dist_mgo (float): Distance between alternating Mg/O layers (in Å).
         output_path (str): If given, write the final structure to this path.
-        vacuum (float): Vacuum gap size in Å.
-        rotate_system (bool): If True, rotates the entire final system 180 degrees 
-                              so the top layers become the bottom layers.
 
     Returns:
         Atoms: Final structure with Fe and added MgO layers.
     """
 
-    __version__ = "0.0.2"
+    __version__ = "0.0.1"
 
     # Sort Fe atoms by z-position
     z_sorted = np.sort(np.unique(slab_fe.positions[:, 2]))
@@ -65,13 +62,7 @@ def build_mgo_stack(slab_fe, num_layers, dist_fe2o=2.3, dist_mgo=2.106, output_p
         prev_o = pos_o_new
         prev_mg = pos_mg_new
 
-    # === Handle System Rotation ===
-    if rotate_system:
-        # Rotate 180 degrees around the X-axis ('x') to flip top and bottom
-        # center='ONLY_O' ensures it flips around the geometric center of the atoms
-        slab.rotate(180, 'x', center='COM')
-
-    # Re-center the slab along the z-axis with vacuum (handles cell re-alignment after rotation)
+    # Re-center the slab along the z-axis with vacuum
     slab.center(vacuum=vacuum, axis=2)
 
     # Write output if requested
@@ -79,3 +70,18 @@ def build_mgo_stack(slab_fe, num_layers, dist_fe2o=2.3, dist_mgo=2.106, output_p
         write(output_path, slab)
 
     return slab
+  
+
+# bulk_mgo = bulk('MgO', 'rocksalt', a=a_mgo, cubic=True)
+# slab_mgo = surface(bulk_mgo, (0, 0, 1), layers=1, vacuum=vacuum)
+# dist_z_mgo = slab_mgo[5].position[2] - slab_mgo[0].position[2]
+
+# slab_fe = surface('Fe', (0, 0, 1), layers = 1, vacuum = vacuum)
+# slab_mgofe = build_mgo_stack(
+#     slab_fe,
+#     num_layers = num_layers_mgo,
+#     dist_fe2o = 2.3,
+#     dist_mgo = dist_z_mgo,
+#     output_path = f"{path_xsf}/slab_mgofe.xsf"
+# )
+# slab_mgo = slab_mgofe[[atom.symbol != 'Fe' for atom in slab_mgofe]]
