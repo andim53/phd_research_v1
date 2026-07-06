@@ -54,6 +54,8 @@ success_count = 0
 fail_count = 0
 
 for seed in range(100):
+    if not seed >= 0:
+        continue
     print(f"Start seed: {seed}")   
 
     path_result = f"seed_{seed}/0_result"
