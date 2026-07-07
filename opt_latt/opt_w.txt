@@ -1,0 +1,18 @@
+=== Tungsten Bulk Lattice Optimization Summary ===
+Initial guess 'a': 3.160 Å
+
+Scan Data:
+Lattice Constant (Å) | Volume (Å³) | Energy (eV)
+---------------------------------------------------
+              3.0020 |     27.0540 |  -21.401367
+              3.0810 |     29.2466 |  -22.228677
+              3.1600 |     31.5545 |  -22.566334
+              3.2390 |     33.9807 |  -22.525268
+              3.3180 |     36.5283 |  -22.196519
+---------------------------------------------------
+
+Optimization Results (Birch-Murnaghan Fit):
+Optimized Bulk Volume:           32.431281 Å³
+Optimized Lattice Constant (a):  3.189001 Å
+Minimum Energy:                  -22.589945 eV
+Bulk Modulus:                    305.18 GPa

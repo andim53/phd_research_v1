@@ -1,0 +1,23 @@
+=== Boron Bulk Lattice Optimization Summary ===
+Source file: B_bulk.cif
+Initial cell volume: 260.2475 Å³
+
+Scan Data:
+Scale Factor | Volume (Å³) | Energy (eV)
+---------------------------------------------------
+      0.9500 |    223.1297 | -228.904121
+      0.9750 |    241.2128 | -233.058861
+      1.0000 |    260.2475 | -234.618923
+      1.0250 |    280.2580 | -233.716501
+      1.0500 |    301.2690 | -232.931388
+---------------------------------------------------
+
+Optimization Results (Birch-Murnaghan Fit):
+Optimized Bulk Volume:           261.765238 Å³
+Optimal Cell Scale Factor:       1.001940
+Minimum Energy:                  -234.383396 eV
+Bulk Modulus:                    167.27 GPa
+
+Optimized Cell Parameters:
+a: 4.9079 Å, b: 4.9079 Å, c: 12.5485 Å
+alpha: 90.00°, beta: 90.00°, gamma: 120.00°

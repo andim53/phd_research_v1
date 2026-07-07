@@ -1,0 +1,18 @@
+=== Platinum Bulk Lattice Optimization Summary ===
+Initial guess 'a': 3.920 Å
+
+Scan Data:
+Lattice Constant (Å) | Volume (Å³) | Energy (eV)
+---------------------------------------------------
+              3.7240 |     51.6451 |  -21.313544
+              3.8220 |     55.8306 |  -22.932022
+              3.9200 |     60.2363 |  -23.643847
+              4.0180 |     64.8679 |  -23.684909
+              4.1160 |     69.7310 |  -23.264674
+---------------------------------------------------
+
+Optimization Results (Birch-Murnaghan Fit):
+Optimized Bulk Volume:           62.832823 Å³
+Optimized Lattice Constant (a):  3.975534 Å
+Minimum Energy:                  -23.734873 eV
+Bulk Modulus:                    253.08 GPa

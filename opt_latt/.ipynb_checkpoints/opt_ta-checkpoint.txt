@@ -1,0 +1,18 @@
+=== Tantalum Bulk Lattice Optimization Summary ===
+Initial guess 'a': 3.300 Å
+
+Scan Data:
+Lattice Constant (Å) | Volume (Å³) | Energy (eV)
+---------------------------------------------------
+              3.1350 |     30.8115 |  -18.467057
+              3.2175 |     33.3085 |  -19.024689
+              3.3000 |     35.9370 |  -19.267959
+              3.3825 |     38.7002 |  -19.237116
+              3.4650 |     41.6016 |  -18.976500
+---------------------------------------------------
+
+Optimization Results (Birch-Murnaghan Fit):
+Optimized Bulk Volume:           36.964860 Å³
+Optimized Lattice Constant (a):  3.331167 Å
+Minimum Energy:                  -19.285615 eV
+Bulk Modulus:                    200.34 GPa
