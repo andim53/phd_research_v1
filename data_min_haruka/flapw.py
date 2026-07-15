@@ -3,11 +3,10 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
+from collections import defaultdict
 import numpy as np
 
 from ase.calculators.calculator import FileIOCalculator
-from pymatgen.io.ase import AseAtomsAdaptor
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 class FLAPW(FileIOCalculator):
     """
@@ -18,6 +17,8 @@ class FLAPW(FileIOCalculator):
     0.0.1 : 初期実装
     0.0.2 : waitコードのアップデート
     0.0.3 : ファイル操作の最適化 (copyからmoveへの移行) とコード整理
+    0.0.4 : lapwin出力時の原子座標を元素ごとにグループ化・ソートするように最適化
+    0.0.5 : カスタム格子定数倍率 (lattice_scale) の追加
     """
     implemented_properties = ["energy"]
     name = "flapw"
@@ -38,6 +39,7 @@ class FLAPW(FileIOCalculator):
         mixing="A",
         representation="SR",
         mpi=False,          # True で mpiexec を使用
+        lattice_scale=1.0,  # 格子定数の倍率パラメータ (デフォルト: 1.0)
         **kwargs,
     ):
         self.input_file = input_file
@@ -53,6 +55,7 @@ class FLAPW(FileIOCalculator):
         self.mixing = mixing
         self.representation = representation
         self.mpi = mpi
+        self.lattice_scale = lattice_scale
 
         # command が明示的に指定されていない場合、mpi パラメータを基に自動構築
         if command is None:
@@ -83,6 +86,7 @@ class FLAPW(FileIOCalculator):
         formula = atoms.get_chemical_formula()
         
         # 単位変換係数 (Angstrom から Bohr)
+        # ※ もし格子ベクトル自体を lattice_scale で割る必要がある場合はここで調整してください
         ANG_TO_BOHR = 1.889726125
         cell_bohr = atoms.cell.array * ANG_TO_BOHR
         lattice_vectors = cell_bohr.copy()
@@ -90,14 +94,23 @@ class FLAPW(FileIOCalculator):
         symbols = atoms.get_chemical_symbols()
         frac_coords = atoms.get_scaled_positions()
 
+        # 元素ごとに座標をグループ化
+        coord_dict = defaultdict(list)
+        for sym, pos in zip(symbols, frac_coords):
+            coord_dict[sym].append(pos)
+        
+        # 重複を除いた構成元素リスト（ソート済み）
+        species = sorted(list(coord_dict.keys()))
+
         with open(filename, "w") as f:
             # タイトルと計算モード
             f.write(f"Title: {formula}\n")
-            f.write("Mode: bulk  auto                           !bulk/film auto/kpts/base\n")
+            f.write("Mode: bulk  auto                            !bulk/film auto/kpts/base\n")
 
             # 格子ベクトルの書き出し
             f.write("*** lattice vectors **********************\n")
-            f.write("1.00000\n")
+            # 指定されたカスタム格子定数倍率を書き出し
+            f.write(f"{self.lattice_scale:.5f}\n")
             for vec in lattice_vectors:
                 f.write(f"{vec[0]:12.6f} {vec[1]:12.6f} {vec[2]:12.6f}\n")
 
@@ -106,14 +119,14 @@ class FLAPW(FileIOCalculator):
             f.write("set pos file:F, name:fconst_pos1.dat\n")
             f.write("internal\n")
 
-            # 同一元素が連続する場合は元素記号を省略して位置のみを出力
-            prev_symbol = None
-            for sym, pos in zip(symbols, frac_coords):
-                x, y, z = pos
-                if sym != prev_symbol:
-                    f.write(f"{sym:<2} {x:12.8f} {y:12.8f} {z:12.8f}\n")
-                    prev_symbol = sym
-                else:
+            # 元素ごとにまとめて出力（同一元素内では2行目以降の元素記号を省略）
+            for sym in species:
+                positions = coord_dict[sym]
+                x, y, z = positions[0]
+                f.write(f"{sym:<2} {x:12.8f} {y:12.8f} {z:12.8f}\n")
+                
+                for pos in positions[1:]:
+                    x, y, z = pos
                     f.write(f"   {x:12.8f} {y:12.8f} {z:12.8f}\n")
 
             # 空間群と一般オプションの出力
@@ -144,7 +157,6 @@ class FLAPW(FileIOCalculator):
             f.write("Equi-density constraint:F, option:set\n")
 
             # --- マフィンティン半径 (RMT) テーブルの読み込み ---
-            # カレントディレクトリにある "README_MT-default" から RMT と lmax をパース
             rmt_table = {}
             with open("README_MT-default") as h:
                 for line in h:
@@ -157,12 +169,6 @@ class FLAPW(FileIOCalculator):
                         lmax = int(m.group(2))
                         rmt = float(m.group(3))
                         rmt_table[symbol] = {"lmax": lmax, "rmt": rmt}
-
-            # 重複を除いた構成元素リストを作成
-            species = []
-            for s in atoms.get_chemical_symbols():
-                if s not in species:
-                    species.append(s)
 
             # 基底関数オプションの書き出し
             f.write("*** BASES *********************************\n")
@@ -228,7 +234,6 @@ class FLAPW(FileIOCalculator):
         outfile = Path(self.directory) / self.output_file
         text = outfile.read_text()
 
-        # 出力ファイルから最終イテレーションの全エネルギー (単位: Hartree) を正規表現で抽出
         matches = re.findall(
             r"total energy for it=\s*\d+:\s*([-0-9.Ee+]+)\s*htr",
             text,
@@ -240,7 +245,6 @@ class FLAPW(FileIOCalculator):
 
         energy_hartree = float(matches[-1])
 
-        # 単位を Hartree から eV (ASE標準) に変換して保持
         HARTREE_TO_EV = 27.211386245988
         self.results["energy"] = energy_hartree * HARTREE_TO_EV
 
@@ -248,20 +252,13 @@ class FLAPW(FileIOCalculator):
         """FLAPWのバックグラウンド計算が完了するまで指定間隔で待機・監視する"""
         outfile = Path(self.directory) / self.output_file
 
-        # 計算開始前に古い出力ファイルが存在すれば誤認防止のため削除
-        #if outfile.exists():
-        #    print("[Python] Found old file! Deleting it now...")
-        #    outfile.unlink()
-
         while True:
             if outfile.exists():
                 text = outfile.read_text(errors="ignore")
 
-                # エラー（停止）の検知
                 if "Stop:" in text:
                     raise RuntimeError("FLAPW stopped.")
 
-                # 正常終了の検知
                 if "FLAPW calculations were done" in text:
                     print("FLAPW finished.")
                     break
@@ -334,11 +331,9 @@ class FLAPW(FileIOCalculator):
         socdir = workdir / "SOC"
         socdir.mkdir(exist_ok=True)
         
-        # バイナリと基本インプットを移動 (ver.0.0.3 で move に最適化)
         shutil.move(workdir / "pflapw", socdir / "pflapw")
         shutil.move(workdir / "lapwin", socdir / "lapwin")
 
-        # FLcopy等によって生成された、末尾が 'scf' で終わる全中間ファイルを移動
         for f in workdir.iterdir():
             if f.is_file() and f.name.endswith("scf"):
                 shutil.move(f, socdir / f.name)
@@ -350,18 +345,16 @@ class FLAPW(FileIOCalculator):
         lapwin = Path(self.directory) / "lapwin"
         text = lapwin.read_text()
 
-        # P matrix 設定を F(False) から T(True) の詳細設定へ置換
         text = text.replace(
             "P matrix calculation:F, option:default",
             "P matrix calculation:T, option:set\n"
             "  valence-valence:T, if T set matrix type             !default:T\n"
-            "    spin matrix:T                                     !default:F\n"
-            "    orbital MT matrix:T                               !default:F\n"
-            "    choose type:F, if T set species:                  !default:F\n"
+            "     spin matrix:T                                      !default:F\n"
+            "     orbital MT matrix:T                                !default:F\n"
+            "     choose type:F, if T set species:                   !default:F\n"
             "  core-valence:F, if T set options"
         )
 
-        # SOC (Second variational SOC) 設定を F から T へ置換
         text = text.replace(
             "Second variational SOC:F, option:default",
             "Second variational SOC:T, option:set\n"
@@ -372,11 +365,9 @@ class FLAPW(FileIOCalculator):
             "  Pre-factor:F"
         )
 
-        # K点メッシュを高密度(50 50 50)へ置換（元設定の値を動的に指定して安全に置換）
         orig_kpts_str = f"  {self.kpts[0]}   {self.kpts[1]}   {self.kpts[2]}"
         text = text.replace(orig_kpts_str, "  50   50   50")
 
-        # 初期スピン分極設定をオフにする
         text = text.replace(
             "Initial spin polarization:T",
             "Initial spin polarization:F"

@@ -4,18 +4,41 @@ FLAPW Workflow Script
 
 Version
 -------
-v0.0.7
-- Pure ASE workflow: Read structures from a .traj file.
-- Directory names created using index and ASE chemical formulas only.
-- Removed pymatgen dependencies.
+v0.0.5
+- Process only a specified number of structures (`NSTRUCTURES`)
+  in a single execution.
+- Useful for dividing long workflows into multiple sequential runs.
+
+v0.0.4
+- Added `FLAPW.execute()` to explicitly execute restart calculations
+  (SOC calculation no longer relies on `get_potential_energy()`).
+
+Workflow
+--------
+1. Ground-state SCF calculation
+2. Copy SCF results
+3. SOC restart calculation (`execute()`)
+4. Copy SOC results
+5. Optics calculation
+
+This script performs:
+    1. Load crystal structures from a pickle file.
+    2. Convert structures to primitive cells.
+    3. Run ground-state SCF calculations.
+    4. Continue from SCF and perform SOC calculations.
+    5. Perform optics calculations.
 """
 
+import pickle
 import shutil
 import traceback
 from pathlib import Path
 
-from ase.io import read, write
+from ase.io import write
 from flapw import FLAPW
+from pymatgen.core import Structure
+from pymatgen.io.ase import AseAtomsAdaptor
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 
 # =============================================================================
@@ -34,19 +57,18 @@ START = 15
 # Number of structures processed in one execution
 NSTRUCTURES = 3
 
-# Trajectory file name to read structures from
-TRAJ_FILE = "structures.traj"
-
 
 # =============================================================================
-# Load structure database (from traj file)
+# Load structure database
 # =============================================================================
 
-# Read all atoms from the trajectory file
-atoms_list = read(TRAJ_FILE, index=":")
+with open("festable_docs.pkl", "rb") as f:
+    docs_dict = pickle.load(f)
+
+docs = list(docs_dict)
 
 # Process only the specified range
-END = min(START + NSTRUCTURES, len(atoms_list))
+END = min(START + NSTRUCTURES, len(docs))
 
 results = []
 
@@ -55,7 +77,7 @@ results = []
 # Main Loop
 # =============================================================================
 
-for i, atoms in enumerate(atoms_list[START:END], start=START):
+for i, doc in enumerate(docs[START:END], start=START):
 
     formula = "Unknown"
     dirname = f"job_{i}"
@@ -70,15 +92,28 @@ for i, atoms in enumerate(atoms_list[START:END], start=START):
         # Phase 1 : Structure preparation
         # =====================================================================
 
-        # Get empirical chemical formula directly from ASE
-        formula = atoms.get_chemical_formula(mode="hill")
-        dirname = f"{i}_{formula}"
+        structure = Structure.from_dict(doc["structure"])
+        formula = structure.composition.reduced_formula
+
+        if "material_id" in doc:
+            dirname = f"{i}_{formula}_{doc['material_id']}"
+        else:
+            dirname = f"{i}_{formula}"
 
         workdir = Path(dirname)
         workdir.mkdir(exist_ok=True)
 
         # Copy executable
         shutil.copy2(BIN_FLAPW, workdir / BIN_FLAPW)
+
+        # Convert to primitive cell to reduce computational cost
+        sga = SpacegroupAnalyzer(structure, symprec=1e-3)
+        primitive = sga.find_primitive()
+
+        if primitive is not None:
+            structure = primitive
+
+        atoms = AseAtomsAdaptor.get_atoms(structure)
 
         # Save structure for visualization/debugging
         write(workdir / "atoms.xsf", atoms)
@@ -125,7 +160,11 @@ for i, atoms in enumerate(atoms_list[START:END], start=START):
         print("-" * 60)
 
         # ---------------------------------------------------------------------
-        # Explicitly execute the restart calculation
+        # v0.0.4
+        #
+        # Explicitly execute the restart calculation.
+        # Previous versions restarted using get_potential_energy().
+        # The execute() method performs only the calculation execution.
         # ---------------------------------------------------------------------
         atoms.calc.execute()
 
@@ -148,6 +187,7 @@ for i, atoms in enumerate(atoms_list[START:END], start=START):
         print("xoptics finished.")
 
         # Optional cleanup
+        #
         atoms.calc.clean()
 
     except Exception as e:
