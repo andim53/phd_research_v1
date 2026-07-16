@@ -1,0 +1,130 @@
+      module mod_periodic
+CC this module containes information about the atoms
+CC it has the 'structure element' which containes all
+CC the attributes of each atom, used for the FLAPW calculation
+CC can be extended to include other typical information usually
+CC set for each atom type, like lmt or lmax etc.......
+CC option 'minimum' may work
+CC kmax*rmt ~ lmax (=<8)
+
+      integer,parameter :: nelementd=103
+      type element
+          character (len=2):: name
+          integer          :: atomic_number
+          integer          :: core_states   !
+          integer          :: lmax_atom     !defalut(kmax=3.9)
+          real             :: rmt_atom      !lost<0.08
+      end type element
+
+      type(element) , dimension(nelementd) :: atom=(/
+     & element('H ',  1,  0, 4, 1.0),
+     & element('He',  2,  0, 4, 1.0),
+c---
+     & element('Li',  3,  1, 6, 1.4),
+     & element('Be',  4,  1, 6, 1.4),  !rmt_interstitial>1.0
+     & element('B ',  5,  1, 6, 1.4),  !rmt_interstitial>1.0
+     & element('C ',  6,  1, 6, 1.4),  !rmt_interstitial>1.0
+     & element('N ',  7,  1, 6, 1.4),  !rmt_interstitial>1.0
+     & element('O ',  8,  1, 6, 1.4),  !rmt_interstitial>1.0
+     & element('F ',  9,  1, 6, 1.4),  !rmt_interstitial>1.0
+     & element('Ne', 10,  1, 6, 1.4),  !rmt_interstitial>1.0
+c---
+     & element('Na', 11,  4, 8, 2.2),
+     & element('Mg', 12,  4, 8, 2.0),
+     & element('Al', 13,  4, 8, 2.0),
+     & element('Si', 14,  4, 8, 2.0),
+     & element('P ', 15,  4, 8, 2.0),
+     & element('S ', 16,  4, 8, 2.0),
+     & element('Cl', 17,  4, 8, 2.0),
+     & element('Ar', 18,  4, 8, 2.0),
+c---
+     & element('K ', 19,  5, 8, 2.3),  !<- v4.40.7
+     & element('Ca', 20,  5, 8, 2.1),  ! | take p-states into valence
+     & element('Sc', 21,  5, 8, 2.0),  !<-
+     & element('Ti', 22,  7, 8, 2.5),
+     & element('V ', 23,  7, 8, 2.3),
+     & element('Cr', 24,  7, 8, 2.2),
+     & element('Mn', 25,  7, 8, 2.1),
+     & element('Fe', 26,  7, 8, 2.0),
+     & element('Co', 27,  7, 8, 2.0),
+     & element('Ni', 28,  7, 8, 2.0),
+     & element('Cu', 29,  7, 8, 2.0),
+     & element('Zn', 30,  7, 8, 2.0),
+     & element('Ga', 31,  7, 8, 2.0),
+     & element('Ge', 32,  7, 8, 2.0),
+     & element('As', 33,  7, 8, 2.0),
+     & element('Se', 34,  7, 8, 2.0),
+     & element('Br', 35,  7, 8, 2.0),
+     & element('Kr', 36,  7, 8, 2.0),
+c---
+     & element('Rb', 37, 10, 8, 2.6),  !<- v4.40.7
+     & element('Sr', 38, 10, 8, 2.4),  ! | take p-states into valence
+     & element('Y ', 39, 10, 8, 2.3),  !<-
+     & element('Zr', 40, 12, 8, 2.9),
+     & element('Nb', 41, 12, 8, 2.7),  
+     & element('Mo', 42, 12, 8, 2.5), 
+     & element('Tc', 43, 12, 8, 2.5),
+     & element('Ru', 44, 12, 8, 2.4),
+     & element('Rh', 45, 12, 8, 2.3),
+     & element('Pd', 46, 12, 8, 2.2),
+     & element('Ag', 47, 12, 8, 2.1),
+     & element('Cd', 48, 12, 8, 2.0),
+     & element('In', 49, 12, 8, 2.0),
+     & element('Sn', 50, 12, 8, 2.0),
+     & element('Sb', 51, 12, 8, 2.0),
+     & element('Te', 52, 12, 8, 2.0),
+     & element('I ', 53, 12, 8, 2.0),
+     & element('Xe', 54, 12, 8, 2.0),
+c---
+     & element('Cs', 55, 15, 8, 3.0),  !<-
+     & element('Ba', 56, 15, 8, 2.8),  ! |
+     & element('La', 57, 15, 8, 2.7),  ! |
+     & element('Ce', 58, 15, 8, 2.6),  ! |
+     & element('Pr', 59, 15, 8, 2.6),  ! |
+     & element('Nd', 60, 15, 8, 2.5),  ! |
+     & element('Pm', 61, 15, 8, 2.5),  ! |
+     & element('Sm', 62, 15, 8, 2.4),  ! | take p-states, and/or
+     & element('Eu', 63, 15, 8, 2.4),  ! | f-states into valence
+     & element('Gd', 64, 15, 8, 2.3),  ! | v4.40.7
+     & element('Tb', 65, 15, 8, 2.3),  ! | take p-states into valence
+     & element('Dy', 66, 15, 8, 2.2),  ! | so ncore=15
+     & element('Ho', 67, 15, 8, 2.2),  ! |
+     & element('Er', 68, 15, 8, 2.2),  ! |
+     & element('Tm', 69, 15, 8, 2.1),  ! |
+     & element('Yb', 70, 15, 8, 2.1),  ! |
+     & element('Lu', 71, 15, 8, 2.0),  !<-
+     & element('Hf', 72, 19, 8, 2.9),
+     & element('Ta', 73, 19, 8, 2.7),
+     & element('W ', 74, 19, 8, 2.5),
+     & element('Re', 75, 19, 8, 2.5),
+     & element('Os', 76, 19, 8, 2.4),
+     & element('Ir', 77, 19, 8, 2.3),
+     & element('Pt', 78, 19, 8, 2.3),
+     & element('Au', 79, 19, 8, 2.2),
+     & element('Hg', 80, 19, 8, 2.1),
+     & element('Tl', 81, 19, 8, 2.0),
+     & element('Pb', 82, 19, 8, 2.0),
+     & element('Bi', 83, 19, 8, 2.0),
+     & element('Po', 84, 19, 8, 2.0),
+     & element('At', 85, 19, 8, 2.0),
+     & element('Rn', 86, 19, 8, 2.0),
+c---
+     & element('Fr', 87, 22, 8, 3.0),  !<-
+     & element('Ra', 88, 22, 8, 2.8),  ! |
+     & element('Ac', 89, 22, 8, 2.7),  ! |
+     & element('Th', 90, 22, 8, 2.6),  ! |
+     & element('Pa', 91, 22, 8, 2.5),  ! | v4.40.7
+     & element('U ', 92, 22, 8, 2.5),  ! | take p-states into valence
+     & element('Np', 93, 22, 8, 2.4),  ! | so ncore=22
+     & element('Pu', 94, 22, 8, 2.4),  ! |
+     & element('Am', 95, 22, 8, 2.3),  ! |
+     & element('Cm', 96, 22, 8, 2.3),  ! |
+     & element('Bk', 97, 22, 8, 2.3),  ! |
+     & element('Cf', 98, 22, 8, 2.2),  ! |
+     & element('Es', 99, 22, 8, 2.2),  ! |
+     & element('Fm',100, 22, 8, 2.1),  ! |
+     & element('Md',101, 22, 8, 2.1),  ! |
+     & element('No',102, 22, 8, 2.0),  ! |
+     & element('Lr',103, 22, 8, 2.0) /) !<-
+
+      end module mod_periodic
