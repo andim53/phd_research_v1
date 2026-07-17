@@ -7,13 +7,13 @@ def generate_interstitial_alloy(
     host_unit: Atoms,
     interstitial_element: str = "B",
     supercell_dim: tuple = (2, 2, 2),
-    num_to_add: int = 1,
+    num_to_remove: int = 0,
     lattice_type: str = "fcc",
     seed: int = None,
 ) -> Atoms:
     """
-    Generates an interstitial alloy by placing a specific number of guest atoms 
-    into the octahedral sites of a conventional FCC or BCC metal host supercell.
+    Generates an interstitial alloy by placing guest atoms into the octahedral
+    sites of a conventional FCC or BCC metal host supercell, with random defect pruning.
 
     Parameters:
     -----------
@@ -23,17 +23,17 @@ def generate_interstitial_alloy(
         Symbol of the interstitial species to insert (e.g., 'B' or 'P').
     supercell_dim : tuple of ints, default (2, 2, 2)
         Supercell expansion dimensions (nx, ny, nz).
-    num_to_add : int, default 1
-        Exact number of interstitial atoms to randomly insert into the available sites.
+    num_to_remove : int, default 0
+        Exact number of interstitial atoms to randomly prune from the system.
     lattice_type : str, default 'fcc'
-        Lymmetry of the host unit cell ('fcc' or 'bcc').
+        Lattice symmetry of the host unit cell ('fcc' or 'bcc').
     seed : int, optional
         Seed for the random selection generator to ensure reproducibility.
 
     Returns:
     --------
     ase.Atoms
-        The combined host and populated interstitial alloy structure.
+        The combined host and pruned interstitial alloy structure.
     """
     if seed is not None:
         random.seed(seed)
@@ -85,20 +85,21 @@ def generate_interstitial_alloy(
     # Map fractional positions into absolute Cartesian coordinates
     interstitial_cart_coords = np.dot(interstitial_frac_coords, cell_matrix)
 
-    # --- 3. Apply Random Interstitial Addition ---
+    # --- 3. Apply Random Interstitial Pruning ---
     total_interstitials = len(interstitial_cart_coords)
-    if num_to_add > total_interstitials:
+    if num_to_remove > total_interstitials:
         raise ValueError(
-            f"Requested to add {num_to_add} atoms, but only {total_interstitials} interstitial sites exist."
+            f"Requested to remove {num_to_remove} atoms, but only {total_interstitials} exist."
         )
 
-    # Randomly select which site indices to populate
-    add_indices = random.sample(range(total_interstitials), num_to_add)
-    final_interstitial_coords = interstitial_cart_coords[add_indices]
+    keep_count = total_interstitials - num_to_remove
+    keep_indices = random.sample(range(total_interstitials), keep_count)
+    final_interstitial_coords = interstitial_cart_coords[keep_indices]
 
     # --- 4. Assemble Alloy and Print Summary ---
+    num_interstitials_left = len(final_interstitial_coords)
     interstitial_atoms = Atoms(
-        symbols=interstitial_element * num_to_add,
+        symbols=interstitial_element * num_interstitials_left,
         positions=final_interstitial_coords,
     )
 
@@ -109,20 +110,21 @@ def generate_interstitial_alloy(
     print(f"Supercell Dimensions: {nx}x{ny}x{nz}")
     print(f"Total Host Atoms: {len(supercell)}")
     print(f"Max Interstitial Sites: {total_interstitials}")
-    print(f"Added Interstitials: {num_to_add} (Randomly)")
+    print(f"Removed Interstitials: {num_to_remove} (Randomly)")
     print(f"Final Chemical Formula: {final_alloy.get_chemical_formula()}")
     print(f"---------------------------------")
 
     return final_alloy
 
 """
-# from scripts.generate_interstitial_alloy import generate_interstitial_alloy
+
+from scripts.generate_interstitial_alloy import generate_interstitial_alloy
 # Define your host unit cell here (e.g., Pt, Pd, Ir, etc.)
 # Note: Must be a conventional cubic FCC cell for correct octahedral mapping
 my_host_unit = bulk("Ta", crystalstructure="bcc", cubic=True)
 # my_host_unit = bulk("Ta", crystalstructure="bcc", cubic=True)
 
-supercell=(2, 2, 2)
+supercell=(1, 1, 1)
 
 # Generate alloy using the external host unit cell
 alloy_structure = generate_interstitial_alloy(
@@ -130,7 +132,7 @@ alloy_structure = generate_interstitial_alloy(
     interstitial_element="B",
     supercell_dim=supercell,
     lattice_type = "bcc",
-    num_to_add=7
+    num_to_remove=5 # total 108 for 3x3x3
 )
 
 from ase.io import write
