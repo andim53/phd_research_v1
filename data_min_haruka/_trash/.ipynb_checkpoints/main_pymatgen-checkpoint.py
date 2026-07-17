@@ -45,11 +45,11 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 # Configuration
 # =============================================================================
 
-BIN_FLAPW = "pflapw"
+BIN_FLAPW = "flapw"
 
 # False : serial calculation (flapw)
 # True  : MPI calculation (pflapw)
-MPI = True
+MPI = False
 
 # First structure index
 START = 15
@@ -105,7 +105,6 @@ for i, doc in enumerate(docs[START:END], start=START):
 
         # Copy executable
         shutil.copy2(BIN_FLAPW, workdir / BIN_FLAPW)
-        shutil.copy2("flapw_run.sh", workdir / "flapw_run.sh")
 
         # Convert to primitive cell to reduce computational cost
         sga = SpacegroupAnalyzer(structure, symprec=1e-3)
@@ -126,9 +125,6 @@ for i, doc in enumerate(docs[START:END], start=START):
         atoms.calc = FLAPW(
             mpi=MPI,
             directory=str(workdir),
-            command="chmod +x ./flapw_run.sh && ./flapw_run.sh",
-            kpts=(3,3,3),
-            sockpts=(50,50,50),
         )
 
         print("[Phase 2] Ground-state SCF")

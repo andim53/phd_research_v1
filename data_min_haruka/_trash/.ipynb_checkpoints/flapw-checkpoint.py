@@ -16,11 +16,9 @@ class FLAPW(FileIOCalculator):
     バージョン履歴:
     0.0.1 : 初期実装
     0.0.2 : waitコードのアップデート
-    0.0.3 : ファイル操作 of copyからmoveへの移行とコード整理
+    0.0.3 : ファイル操作の最適化 (copyからmoveへの移行) とコード整理
     0.0.4 : lapwin出力時の原子座標を元素ごとにグループ化・ソートするように最適化
     0.0.5 : カスタム格子定数倍率 (lattice_scale) の追加
-    0.0.6 : flapw_run.shの作成
-    0.0.7 : SOC計算時のK点数 (sockpts) をインプットパラメーター化
     """
     implemented_properties = ["energy"]
     name = "flapw"
@@ -34,7 +32,6 @@ class FLAPW(FileIOCalculator):
         star_cutoff=9.8,
         pw_cutoff=3.9,
         kpts=(5, 5, 5),
-        sockpts=(50, 50, 50),  # SOC用のK点数パラメータを追加 (デフォルト: 50, 50, 50)
         smearing=0.001,
         xc="gga",
         starting_state="AFM",
@@ -51,7 +48,6 @@ class FLAPW(FileIOCalculator):
         self.star_cutoff = star_cutoff
         self.pw_cutoff = pw_cutoff
         self.kpts = kpts
-        self.sockpts = sockpts  # インスタンス変数に格納
         self.smearing = smearing
         self.xc = xc
         self.starting_state = starting_state
@@ -64,7 +60,7 @@ class FLAPW(FileIOCalculator):
         # command が明示的に指定されていない場合、mpi パラメータを基に自動構築
         if command is None:
             if self.mpi:
-                command = "mpiexec ./pflapw"
+                command = "module load intel && module load impi && mpiexec ./pflapw"
             else:
                 command = "./flapw"
 
@@ -369,10 +365,8 @@ class FLAPW(FileIOCalculator):
             "  Pre-factor:F"
         )
 
-        # 動的に `self.kpts` から `self.sockpts` へ置換されるように変更
         orig_kpts_str = f"  {self.kpts[0]}   {self.kpts[1]}   {self.kpts[2]}"
-        target_sockpts_str = f"  {self.sockpts[0]}   {self.sockpts[1]}   {self.sockpts[2]}"
-        text = text.replace(orig_kpts_str, target_sockpts_str)
+        text = text.replace(orig_kpts_str, "  50   50   50")
 
         text = text.replace(
             "Initial spin polarization:T",
