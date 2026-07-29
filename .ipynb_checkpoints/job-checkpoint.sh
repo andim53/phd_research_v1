@@ -1,7 +1,7 @@
 #!/bin/sh
 
-#PJM -L rscgrp=a-pj24001864
-##PJM -L rscgrp=a-batch
+##PJM -L rscgrp=a-pj24001864
+#PJM -L rscgrp=a-batch
 #PJM -L vnode-core=24
 #PJM --mpi proc=24
 #PJM -L elapse=120:00:00
