@@ -230,7 +230,7 @@ def plot_structure_landscape(
             if fill_density:
                 ax_dens.fill_betweenx(energy_grid, 0, density, color=curve_color, alpha=density_alpha, zorder=current_fill_zorder)
 
-    ax_dens.set_xlabel('State Density (config./eV)', fontsize=fontsize)
+    ax_dens.set_xlabel('State Density\n(config./eV)', fontsize=fontsize)
 
     if num_curves > 1:
         fig.legend(frameon=False, fontsize=fontsize-2, loc='center left', bbox_to_anchor=(1.02, 0.5))
